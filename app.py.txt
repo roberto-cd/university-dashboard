@@ -1,0 +1,124 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Configuración
+st.set_page_config(
+    page_title="Dashboard Universitario",
+    layout="wide"
+)
+
+# Título
+st.title("Dashboard Analítico Universitario")
+
+# Cargar datos
+@st.cache_data
+def load_data():
+    return pd.read_csv("university_student_data.csv")
+
+df = load_data()
+
+# Sidebar
+st.sidebar.header("Filtros")
+
+selected_year = st.sidebar.multiselect(
+    "Seleccione Año",
+    options=df['Year'].unique(),
+    default=df['Year'].unique()
+)
+
+selected_term = st.sidebar.multiselect(
+    "Seleccione Periodo",
+    options=df['Term'].unique(),
+    default=df['Term'].unique()
+)
+
+# Filtrar datos
+filtered_df = df[
+    (df['Year'].isin(selected_year)) &
+    (df['Term'].isin(selected_term))
+]
+
+# KPIs
+st.subheader("Indicadores Principales")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.metric(
+        "Solicitudes",
+        int(filtered_df['Applications'].sum())
+    )
+
+with col2:
+    st.metric(
+        "Admitidos",
+        int(filtered_df['Admitted'].sum())
+    )
+
+with col3:
+    st.metric(
+        "Matriculados",
+        int(filtered_df['Enrolled'].sum())
+    )
+
+with col4:
+    st.metric(
+        "Retención",
+        f"{filtered_df['Retention Rate (%)'].mean():.2f}%"
+    )
+
+# Gráfico Retención
+st.subheader("Tendencia de Retención")
+
+retention_data = filtered_df.groupby('Year')['Retention Rate (%)'].mean().reset_index()
+
+fig1, ax1 = plt.subplots(figsize=(10,5))
+
+sns.lineplot(
+    data=retention_data,
+    x='Year',
+    y='Retention Rate (%)',
+    marker='o',
+    ax=ax1
+)
+
+st.pyplot(fig1)
+
+# Gráfico Satisfacción
+st.subheader("Satisfacción Estudiantil")
+
+satisfaction_data = filtered_df.groupby('Year')['Student Satisfaction (%)'].mean().reset_index()
+
+fig2, ax2 = plt.subplots(figsize=(10,5))
+
+sns.barplot(
+    data=satisfaction_data,
+    x='Year',
+    y='Student Satisfaction (%)',
+    ax=ax2
+)
+
+st.pyplot(fig2)
+
+# Gráfico Circular
+st.subheader("Distribución por Facultad")
+
+engineering = filtered_df['Engineering Enrolled'].sum()
+business = filtered_df['Business Enrolled'].sum()
+arts = filtered_df['Arts Enrolled'].sum()
+science = filtered_df['Science Enrolled'].sum()
+
+labels = ['Ingeniería', 'Negocios', 'Artes', 'Ciencias']
+values = [engineering, business, arts, science]
+
+fig3, ax3 = plt.subplots(figsize=(7,7))
+
+ax3.pie(
+    values,
+    labels=labels,
+    autopct='%1.1f%%'
+)
+
+st.pyplot(fig3)
